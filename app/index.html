@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flask Docker App</title>
+</head>
+<body>
+  <h2>Add Item</h2>
+  <input type="text" id="itemName" placeholder="Item Name" />
+  <button onclick="addItem()">Add</button>
+
+  <h2>Items List</h2>
+  <ul id="itemList"></ul>
+
+  <script>
+    const API_URL = 'http://localhost/items';
+
+    async function fetchItems() {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      const list = document.getElementById('itemList');
+      list.innerHTML = data.map(item => `<li>${item.name} (${item._id})</li>`).join('');
+    }
+
+    async function addItem() {
+      const name = document.getElementById('itemName').value;
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      document.getElementById('itemName').value = '';
+      fetchItems();
+    }
+
+    fetchItems();
+  </script>
+</body>
+</html>

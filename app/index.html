@@ -2,35 +2,139 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Flask Docker App</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; max-width: 600px; }
+    .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    input { margin: 5px 0; padding: 8px; width: 95%; }
+    button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
+    .message { margin-top: 10px; font-weight: bold; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
 </head>
 <body>
-  <h2>Add Item</h2>
-  <input type="text" id="itemName" placeholder="Item Name" />
-  <button onclick="addItem()">Add</button>
 
-  <h2>Items List</h2>
-  <ul id="itemList"></ul>
+  <div class="card">
+    <h2>User Authentication (bcrypt)</h2>
+    
+    <h3>Register</h3>
+    <input type="text" id="regUsername" placeholder="Username" /><br />
+    <input type="password" id="regPassword" placeholder="Password" /><br />
+    <button onclick="registerUser()">Register</button>
+
+    <hr style="margin: 20px 0;" />
+
+    <h3>Login</h3>
+    <input type="text" id="loginUsername" placeholder="Username" /><br />
+    <input type="password" id="loginPassword" placeholder="Password" /><br />
+    <button onclick="loginUser()">Login</button>
+
+    <div id="authMessage" class="message"></div>
+  </div>
+
+  <div class="card">
+    <h2>Items List</h2>
+    <input type="text" id="itemName" placeholder="New Item Name" />
+    <button onclick="addItem()">Add Item</button>
+
+    <ul id="itemList"></ul>
+  </div>
 
   <script>
-    const API_URL = 'http://localhost/items';
+    const API_BASE = 'http://localhost';
+
+    function showMessage(text, isError = false) {
+      const msgDiv = document.getElementById('authMessage');
+      msgDiv.textContent = text;
+      msgDiv.className = `message ${isError ? 'error' : 'success'}`;
+    }
+
+    async function registerUser() {
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+
+      if (!username || !password) {
+        showMessage('Please enter both username and password.', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showMessage(`User "${username}" registered successfully! ID: ${data.inserted_id}`);
+          document.getElementById('regUsername').value = '';
+          document.getElementById('regPassword').value = '';
+        } else {
+          showMessage(data.message || 'Registration failed.', true);
+        }
+      } catch (err) {
+        showMessage('Error connecting to backend server.', true);
+      }
+    }
+
+    async function loginUser() {
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+
+      if (!username || !password) {
+        showMessage('Please enter both username and password.', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.status === 'success') {
+          showMessage(`Logged in successfully as "${data.username}"!`);
+          document.getElementById('loginUsername').value = '';
+          document.getElementById('loginPassword').value = '';
+        } else {
+          showMessage(data.message || 'Invalid username or password.', true);
+        }
+      } catch (err) {
+        showMessage('Error connecting to backend server.', true);
+      }
+    }
 
     async function fetchItems() {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      const list = document.getElementById('itemList');
-      list.innerHTML = data.map(item => `<li>${item.name} (${item._id})</li>`).join('');
+      try {
+        const res = await fetch(`${API_BASE}/items`);
+        const data = await res.json();
+        const list = document.getElementById('itemList');
+        list.innerHTML = data.map(item => `<li><strong>${item.name}</strong> (ID: ${item._id})</li>`).join('');
+      } catch (err) {
+        console.error('Failed to fetch items:', err);
+      }
     }
 
     async function addItem() {
       const name = document.getElementById('itemName').value;
-      await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      document.getElementById('itemName').value = '';
-      fetchItems();
+      if (!name) return;
+
+      try {
+        await fetch(`${API_BASE}/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        document.getElementById('itemName').value = '';
+        fetchItems();
+      } catch (err) {
+        console.error('Failed to add item:', err);
+      }
     }
 
     fetchItems();

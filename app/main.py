@@ -28,6 +28,19 @@ def home():
         "files_in_dir": os.listdir(base_dir)
     }), 404
 
+@app.route('/<path:filename>')
+def serve_static(filename):
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    possible_paths = [
+        base_dir,
+        os.path.join(base_dir, 'app'),
+        os.path.join(base_dir, 'frontend')
+    ]
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, filename)):
+            return send_from_directory(path, filename)
+    return jsonify({"error": f"File '{filename}' not found"}), 404
+
 @app.route('/items', methods=['GET'])
 def read_items():
     return jsonify(get_items(db))

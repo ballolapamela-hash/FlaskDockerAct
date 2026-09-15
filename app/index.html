@@ -4,46 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Flask Docker App</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 30px; max-width: 600px; }
-    .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    input { margin: 5px 0; padding: 8px; width: 95%; }
-    button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
-    .message { margin-top: 10px; font-weight: bold; }
-    .success { color: green; }
-    .error { color: red; }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="container">
+    <div class="tabs" id="tabContainer">
+      <button class="tab-btn active" onclick="switchTab('loginView')">Login</button>
+      <button class="tab-btn" onclick="switchTab('registerView')">Register</button>
+      <button class="tab-btn" id="dashTab" style="display:none;" onclick="switchTab('itemsView')">Dashboard</button>
+    </div>
 
-  <div class="card">
-    <h2>User Authentication (bcrypt)</h2>
-    
-    <h3>Register</h3>
-    <input type="text" id="regUsername" placeholder="Username" /><br />
-    <input type="password" id="regPassword" placeholder="Password" /><br />
-    <button onclick="registerUser()">Register</button>
+    <div id="loginView" class="view-section active">
+      <h2>User Login</h2>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUsername" placeholder="Enter username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password" />
+      </div>
+      <button class="btn" onclick="loginUser()">Sign In</button>
+    </div>
 
-    <hr style="margin: 20px 0;" />
+    <div id="registerView" class="view-section">
+      <h2>Create Account</h2>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="regUsername" placeholder="Choose username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Choose password" />
+      </div>
+      <button class="btn" onclick="registerUser()">Register</button>
+    </div>
 
-    <h3>Login</h3>
-    <input type="text" id="loginUsername" placeholder="Username" /><br />
-    <input type="password" id="loginPassword" placeholder="Password" /><br />
-    <button onclick="loginUser()">Login</button>
+    <div id="itemsView" class="view-section">
+      <h2>Item Management</h2>
+      <div class="form-group">
+        <input type="text" id="itemName" placeholder="New item name" />
+      </div>
+      <button class="btn" onclick="addItem()">Add Item</button>
+
+      <h3>Your Items</h3>
+      <ul id="itemList"></ul>
+
+      <button class="btn logout-btn" onclick="logoutUser()">Log Out</button>
+    </div>
 
     <div id="authMessage" class="message"></div>
   </div>
 
-  <div class="card">
-    <h2>Items List</h2>
-    <input type="text" id="itemName" placeholder="New Item Name" />
-    <button onclick="addItem()">Add Item</button>
-
-    <ul id="itemList"></ul>
-  </div>
-
   <script>
-    const API_BASE = 'http://localhost';
+    const API_BASE = window.location.origin;
 
     function showMessage(text, isError = false) {
       const msgDiv = document.getElementById('authMessage');
@@ -51,14 +65,22 @@
       msgDiv.className = `message ${isError ? 'error' : 'success'}`;
     }
 
+    function switchTab(viewId) {
+      showMessage('');
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (viewId === 'loginView') document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      if (viewId === 'registerView') document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      if (viewId === 'itemsView') document.getElementById('dashTab').classList.add('active');
+
+      document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
     async function registerUser() {
       const username = document.getElementById('regUsername').value;
       const password = document.getElementById('regPassword').value;
 
-      if (!username || !password) {
-        showMessage('Please enter both username and password.', true);
-        return;
-      }
+      if (!username || !password) return showMessage('Please fill in all fields.', true);
 
       try {
         const res = await fetch(`${API_BASE}/register`, {
@@ -69,14 +91,15 @@
         const data = await res.json();
 
         if (res.ok) {
-          showMessage(`User "${username}" registered successfully! ID: ${data.inserted_id}`);
+          showMessage('Account created successfully! Please log in.');
           document.getElementById('regUsername').value = '';
           document.getElementById('regPassword').value = '';
+          setTimeout(() => switchTab('loginView'), 1200);
         } else {
           showMessage(data.message || 'Registration failed.', true);
         }
       } catch (err) {
-        showMessage('Error connecting to backend server.', true);
+        showMessage('Error connecting to backend.', true);
       }
     }
 
@@ -84,10 +107,7 @@
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
 
-      if (!username || !password) {
-        showMessage('Please enter both username and password.', true);
-        return;
-      }
+      if (!username || !password) return showMessage('Please fill in all fields.', true);
 
       try {
         const res = await fetch(`${API_BASE}/login`, {
@@ -98,15 +118,27 @@
         const data = await res.json();
 
         if (res.ok && data.status === 'success') {
-          showMessage(`Logged in successfully as "${data.username}"!`);
+          showMessage(`Welcome back, ${data.username}! Redirecting...`);
           document.getElementById('loginUsername').value = '';
           document.getElementById('loginPassword').value = '';
+          
+          document.getElementById('dashTab').style.display = 'block';
+          setTimeout(() => {
+            switchTab('itemsView');
+            fetchItems();
+          }, 800);
         } else {
           showMessage(data.message || 'Invalid username or password.', true);
         }
       } catch (err) {
-        showMessage('Error connecting to backend server.', true);
+        showMessage('Error connecting to backend.', true);
       }
+    }
+
+    function logoutUser() {
+      document.getElementById('dashTab').style.display = 'none';
+      switchTab('loginView');
+      showMessage('Logged out successfully.');
     }
 
     async function fetchItems() {
@@ -114,7 +146,7 @@
         const res = await fetch(`${API_BASE}/items`);
         const data = await res.json();
         const list = document.getElementById('itemList');
-        list.innerHTML = data.map(item => `<li><strong>${item.name}</strong> (ID: ${item._id})</li>`).join('');
+        list.innerHTML = data.map(item => `<li><strong>${item.name}</strong><br><small>ID: ${item._id}</small></li>`).join('');
       } catch (err) {
         console.error('Failed to fetch items:', err);
       }
@@ -136,8 +168,6 @@
         console.error('Failed to add item:', err);
       }
     }
-
-    fetchItems();
   </script>
 </body>
 </html>

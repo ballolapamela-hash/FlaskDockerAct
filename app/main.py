@@ -8,7 +8,7 @@ db = init_db()
 
 @app.route('/')
 def home():
-    return jsonify({"message": "Flask App is running!"})
+    return send_from_directory('app', 'index.html')
 
 @app.route('/items', methods=['GET'])
 def read_items():

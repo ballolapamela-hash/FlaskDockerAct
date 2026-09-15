@@ -1,14 +1,32 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from crud import init_db, get_items, add_items, delete_item, register_user, login_user
+import os
 
 app = Flask(__name__)
 CORS(app)
 db = init_db()
 
 @app.route('/')
+@app.route('/index.html')
 def home():
-    return send_from_directory('app', 'index.html')
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+
+    possible_paths = [
+        base_dir,
+        os.path.join(base_dir, 'app'),
+        os.path.join(base_dir, 'frontend')
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, 'index.html')):
+            return send_from_directory(path, 'index.html')
+
+    return jsonify({
+        "error": "index.html not found in container",
+        "working_dir": base_dir,
+        "files_in_dir": os.listdir(base_dir)
+    }), 404
 
 @app.route('/items', methods=['GET'])
 def read_items():

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from crud import init_db, get_items, add_items, delete_item, register_user, login_user
 
